@@ -39,11 +39,11 @@ This document outlines the integration process between any Android application a
 
 | Function | Intent Action | Description |
 |----------|---------------|-------------|
-| Login | `com.example.fuelin.LOGIN` | Authenticate user |
-| Start Shift | `com.example.fuelin.START_SHIFT` | Open a new shift |
-| NFC Order | `com.example.fuelin.NFC_ORDER` | Process NFC tag and return order details |
-| Update Order | `com.example.fuelin.UPDATE_ORDER` | Update order quantity |
-| Transaction Details | `com.example.fuelin.TRANSACTIONS` | Get specific order details |
+| Login | `com.fuelin.attendant.LOGIN` | Authenticate user |
+| Start Shift | `com.fuelin.attendant.START_SHIFT` | Open a new shift |
+| NFC Order | `com.fuelin.attendant.NFC_ORDER` | Process NFC tag and return order details |
+| Update Order | `com.fuelin.attendant.UPDATE_ORDER` | Update order quantity |
+| Transaction Details | `com.fuelin.attendant.TRANSACTIONS` | Get specific order details |
 
 ### 1. Authentication
 
@@ -58,7 +58,7 @@ This document outlines the integration process between any Android application a
 
 ```java
 // Initialize the intent with proper action
-Intent intent = new Intent("com.example.fuelin.LOGIN");
+Intent intent = new Intent("com.fuelin.attendant.LOGIN");
 intent.addCategory(Intent.CATEGORY_DEFAULT);
 
 // Add login credentials
@@ -127,7 +127,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 ```java
 // Initialize the intent with proper action
-Intent intent = new Intent("com.example.fuelin.START_SHIFT");
+Intent intent = new Intent("com.fuelin.attendant.START_SHIFT");
 intent.addCategory(Intent.CATEGORY_DEFAULT);
 
 // Start Fuelin app and wait for result
@@ -160,7 +160,7 @@ Fuelin will return a JSON response confirming the shift has been started:
 
 ```java
 // Initialize the intent with proper action
-Intent intent = new Intent("com.example.fuelin.NFC_ORDER");
+Intent intent = new Intent("com.fuelin.attendant.NFC_ORDER");
 intent.addCategory(Intent.CATEGORY_DEFAULT);
 
 // Add required NFC tag data
@@ -267,7 +267,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 ```java
 // Initialize the intent with proper action
-Intent intent = new Intent("com.example.fuelin.UPDATE_ORDER");
+Intent intent = new Intent("com.fuelin.attendant.UPDATE_ORDER");
 intent.addCategory(Intent.CATEGORY_DEFAULT);
 
 // Add required update data
@@ -301,7 +301,7 @@ Fuelin will return a JSON response confirming the update:
 
 ```java
 // Initialize the intent with proper action
-Intent intent = new Intent("com.example.fuelin.TRANSACTIONS");
+Intent intent = new Intent("com.fuelin.attendant.TRANSACTIONS");
 intent.addCategory(Intent.CATEGORY_DEFAULT);
 
 // Add order ID
@@ -402,7 +402,7 @@ public class FuelinIntegrationManager {
     }
     
     public void initiateLogin(String phone, String password) {
-        Intent intent = new Intent("com.example.fuelin.LOGIN");
+        Intent intent = new Intent("com.fuelin.attendant.LOGIN");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         intent.putExtra("phone", phone);
         intent.putExtra("password", password);
@@ -414,7 +414,7 @@ public class FuelinIntegrationManager {
             throw new IllegalStateException("Must be logged in before starting shift");
         }
         
-        Intent intent = new Intent("com.example.fuelin.START_SHIFT");
+        Intent intent = new Intent("com.fuelin.attendant.START_SHIFT");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         activity.startActivityForResult(intent, REQUEST_START_SHIFT);
     }
@@ -424,7 +424,7 @@ public class FuelinIntegrationManager {
             throw new IllegalStateException("Must be logged in and have an open shift");
         }
         
-        Intent intent = new Intent("com.example.fuelin.NFC_ORDER");
+        Intent intent = new Intent("com.fuelin.attendant.NFC_ORDER");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         intent.putExtra("nfc_tag", nfcTagSerial);
         activity.startActivityForResult(intent, REQUEST_NFC_ORDER);
@@ -435,7 +435,7 @@ public class FuelinIntegrationManager {
             throw new IllegalStateException("Must be logged in and have an open shift");
         }
         
-        Intent intent = new Intent("com.example.fuelin.UPDATE_ORDER");
+        Intent intent = new Intent("com.fuelin.attendant.UPDATE_ORDER");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         intent.putExtra("order_id", orderId);
         intent.putExtra("quantity", quantity);
@@ -447,7 +447,7 @@ public class FuelinIntegrationManager {
             throw new IllegalStateException("Must be logged in to access transactions");
         }
         
-        Intent intent = new Intent("com.example.fuelin.TRANSACTIONS");
+        Intent intent = new Intent("com.fuelin.attendant.TRANSACTIONS");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         intent.putExtra("order_id", orderId);
         activity.startActivityForResult(intent, REQUEST_TRANSACTION_DETAILS);
@@ -505,7 +505,7 @@ class FuelinIntegrationManager(private val activity: Activity) {
     private var isShiftOpen = false
     
     fun initiateLogin(phone: String, password: String) {
-        val intent = Intent("com.example.fuelin.LOGIN").apply {
+        val intent = Intent("com.fuelin.attendant.LOGIN").apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             putExtra("phone", phone)
             putExtra("password", password)
@@ -518,7 +518,7 @@ class FuelinIntegrationManager(private val activity: Activity) {
             throw IllegalStateException("Must be logged in before starting shift")
         }
         
-        val intent = Intent("com.example.fuelin.START_SHIFT").apply {
+        val intent = Intent("com.fuelin.attendant.START_SHIFT").apply {
             addCategory(Intent.CATEGORY_DEFAULT)
         }
         activity.startActivityForResult(intent, REQUEST_START_SHIFT)
@@ -529,7 +529,7 @@ class FuelinIntegrationManager(private val activity: Activity) {
             throw IllegalStateException("Must be logged in and have an open shift")
         }
         
-        val intent = Intent("com.example.fuelin.NFC_ORDER").apply {
+        val intent = Intent("com.fuelin.attendant.NFC_ORDER").apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             putExtra("nfc_tag", nfcTagSerial)
         }
@@ -541,7 +541,7 @@ class FuelinIntegrationManager(private val activity: Activity) {
             throw IllegalStateException("Must be logged in and have an open shift")
         }
         
-        val intent = Intent("com.example.fuelin.UPDATE_ORDER").apply {
+        val intent = Intent("com.fuelin.attendant.UPDATE_ORDER").apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             putExtra("order_id", orderId)
             putExtra("quantity", quantity)
@@ -554,7 +554,7 @@ class FuelinIntegrationManager(private val activity: Activity) {
             throw IllegalStateException("Must be logged in to access transactions")
         }
         
-        val intent = Intent("com.example.fuelin.TRANSACTIONS").apply {
+        val intent = Intent("com.fuelin.attendant.TRANSACTIONS").apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             putExtra("order_id", orderId)
         }
