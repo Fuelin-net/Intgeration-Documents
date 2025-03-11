@@ -8,6 +8,7 @@ This document outlines the integration process between any Android application a
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-03-08 | Initial integration documentation |
+| 1.1 | 2025-03-11 | Added close_shift functionality |
 
 ## Integration Scenarios
 
@@ -20,6 +21,8 @@ This document outlines the integration process between any Android application a
 - After login, your app checks if shift is open
 - If no shift is open, your app must call start_shift
 - Fuelin starts shift and confirms
+- When finished, your app can call close_shift
+- Fuelin closes the shift and returns confirmation
 
 ### 3. NFC Tag Processing
 - Your app reads NFC tag and sends the serial number to Fuelin
@@ -41,6 +44,7 @@ This document outlines the integration process between any Android application a
 |----------|---------------|-------------|
 | Login | `com.fuelin.attendant.LOGIN` | Authenticate user |
 | Start Shift | `com.fuelin.attendant.START_SHIFT` | Open a new shift |
+| Close Shift | `com.fuelin.attendant.CLOSE_SHIFT` | Close an active shift |
 | NFC Order | `com.fuelin.attendant.NFC_ORDER` | Process NFC tag and return order details |
 | Update Order | `com.fuelin.attendant.UPDATE_ORDER` | Update order quantity |
 | Transaction Details | `com.fuelin.attendant.TRANSACTIONS` | Get specific order details |
@@ -117,13 +121,15 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 ### 2. Shift Management
 
-#### Parameters to Send to Fuelin
+#### Starting a Shift
+
+##### Parameters to Send to Fuelin
 
 | Parameter Name | Type | Required | Description |
 |---------------|------|----------|-------------|
 | (No parameters required) |  |  | Fuelin will use the currently logged-in user |
 
-#### Example Code (Java)
+##### Example Code (Java)
 
 ```java
 // Initialize the intent with proper action
@@ -134,7 +140,7 @@ intent.addCategory(Intent.CATEGORY_DEFAULT);
 startActivityForResult(intent, REQUEST_START_SHIFT);
 ```
 
-#### Response from Fuelin
+##### Response from Fuelin
 
 Fuelin will return a JSON response confirming the shift has been started:
 
@@ -144,6 +150,42 @@ Fuelin will return a JSON response confirming the shift has been started:
     "data": {
         "shift_id": 123,
         "start_time": "2025-03-08 09:15:22"
+    }
+}
+```
+
+#### Closing a Shift
+
+##### Parameters to Send to Fuelin
+
+| Parameter Name | Type | Required | Description |
+|---------------|------|----------|-------------|
+| (No parameters required) |  |  | Fuelin will close the shift for the currently logged-in user |
+
+##### Example Code (Java)
+
+```java
+// Initialize the intent with proper action
+Intent intent = new Intent("com.fuelin.attendant.CLOSE_SHIFT");
+intent.addCategory(Intent.CATEGORY_DEFAULT);
+
+// Start Fuelin app and wait for result
+startActivityForResult(intent, REQUEST_CLOSE_SHIFT);
+```
+
+##### Response from Fuelin
+
+Fuelin will return a JSON response confirming the shift has been closed:
+
+```json
+{
+    "message": "Success",
+    "data": {
+        "shift_id": 123,
+        "start_time": "2025-03-08 09:15:22",
+        "end_time": "2025-03-08 17:30:45",
+        "duration": "8h 15m",
+        "total_orders": 42
     }
 }
 ```
@@ -325,6 +367,7 @@ startActivityForResult(intent, REQUEST_TRANSACTION_DETAILS);
 8. Your app displays the order information
 9. If needed, your app can update order quantity
 10. Your app can also request specific order details using the transactions call
+11. When work is complete, your app calls close_shift to end the active shift
 
 ## Error Handling
 
@@ -337,6 +380,7 @@ startActivityForResult(intent, REQUEST_TRANSACTION_DETAILS);
 | "Order Not Found" | The specified order ID doesn't exist | Verify order ID or create a new order |
 | "Authentication Failed" | Login credentials are incorrect | Ask user to retry with correct credentials |
 | "Shift Already Open" | Attempting to open a shift while one is already active | Continue with normal operation |
+| "No Active Shift" | Attempting to close a shift when none is active | No action needed or start a new shift |
 | "Network Error" | Communication with server failed | Check network connection and retry |
 
 ## Testing the Integration
@@ -374,6 +418,11 @@ startActivityForResult(intent, REQUEST_TRANSACTION_DETAILS);
    - Check intent action names are correct
    - Ensure all required parameters are included
 
+4. **Cannot close shift**
+   - Verify user is logged in
+   - Ensure a shift is actually open
+   - Check network connectivity
+
 
 
 
@@ -392,6 +441,7 @@ public class FuelinIntegrationManager {
     private static final int REQUEST_NFC_ORDER = 1003;
     private static final int REQUEST_UPDATE_ORDER = 1004;
     private static final int REQUEST_TRANSACTION_DETAILS = 1005;
+    private static final int REQUEST_CLOSE_SHIFT = 1006;
     
     private final Activity activity;
     private boolean isLoggedIn = false;
@@ -417,6 +467,16 @@ public class FuelinIntegrationManager {
         Intent intent = new Intent("com.fuelin.attendant.START_SHIFT");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         activity.startActivityForResult(intent, REQUEST_START_SHIFT);
+    }
+    
+    public void closeShift() {
+        if (!isLoggedIn || !isShiftOpen) {
+            throw new IllegalStateException("Must be logged in and have an open shift to close");
+        }
+        
+        Intent intent = new Intent("com.fuelin.attendant.CLOSE_SHIFT");
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        activity.startActivityForResult(intent, REQUEST_CLOSE_SHIFT);
     }
     
     public void processNfcTag(String nfcTagSerial) {
@@ -471,6 +531,11 @@ public class FuelinIntegrationManager {
                 isShiftOpen = true;
                 break;
                 
+            case REQUEST_CLOSE_SHIFT:
+                // Process shift close result
+                isShiftOpen = false;
+                break;
+                
             case REQUEST_NFC_ORDER:
                 // Process NFC order result
                 String jsonResponse = data.getStringExtra("response_data");
@@ -499,6 +564,7 @@ class FuelinIntegrationManager(private val activity: Activity) {
         private const val REQUEST_NFC_ORDER = 1003
         private const val REQUEST_UPDATE_ORDER = 1004
         private const val REQUEST_TRANSACTION_DETAILS = 1005
+        private const val REQUEST_CLOSE_SHIFT = 1006
     }
     
     private var isLoggedIn = false
@@ -522,6 +588,17 @@ class FuelinIntegrationManager(private val activity: Activity) {
             addCategory(Intent.CATEGORY_DEFAULT)
         }
         activity.startActivityForResult(intent, REQUEST_START_SHIFT)
+    }
+    
+    fun closeShift() {
+        if (!isLoggedIn || !isShiftOpen) {
+            throw IllegalStateException("Must be logged in and have an open shift to close")
+        }
+        
+        val intent = Intent("com.fuelin.attendant.CLOSE_SHIFT").apply {
+            addCategory(Intent.CATEGORY_DEFAULT)
+        }
+        activity.startActivityForResult(intent, REQUEST_CLOSE_SHIFT)
     }
     
     fun processNfcTag(nfcTagSerial: String) {
@@ -577,6 +654,11 @@ class FuelinIntegrationManager(private val activity: Activity) {
             REQUEST_START_SHIFT -> {
                 // Process shift start result
                 isShiftOpen = true
+            }
+            
+            REQUEST_CLOSE_SHIFT -> {
+                // Process shift close result
+                isShiftOpen = false
             }
             
             REQUEST_NFC_ORDER -> {
