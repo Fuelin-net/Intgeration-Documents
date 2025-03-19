@@ -9,6 +9,7 @@ This document outlines the integration process between any Android application a
 |---------|------|---------|
 | 1.0 | 2025-03-08 | Initial integration documentation |
 | 1.1 | 2025-03-11 | Added close_shift functionality |
+| 1.2 | 2025-03-19 | Added fuel_type and amount parameters to NFC order |
 
 ## Integration Scenarios
 
@@ -26,6 +27,7 @@ This document outlines the integration process between any Android application a
 
 ### 3. NFC Tag Processing
 - Your app reads NFC tag and sends the serial number to Fuelin
+- Your app specifies fuel type and amount (optional)
 - Fuelin processes the tag and returns order details
 - Your app displays or processes the order information
 
@@ -197,6 +199,9 @@ Fuelin will return a JSON response confirming the shift has been closed:
 | Parameter Name | Type | Required | Description |
 |---------------|------|----------|-------------|
 | nfc_tag | String | Yes | Serial number from the NFC tag |
+| fuel_type | Integer | No | Type of fuel (2 = 91, 5 = Diesel, 6 = 95) |
+| unit_price | String | No | Fuel Unit Price |
+| amount | String | No | Amount of fuel to dispense |
 
 #### Example Code (Java)
 
@@ -207,6 +212,10 @@ intent.addCategory(Intent.CATEGORY_DEFAULT);
 
 // Add required NFC tag data
 intent.putExtra("nfc_tag", nfcTagSerialNumber);
+
+// Add optional fuel type and amount
+intent.putExtra("fuel_type", 5); // 5 = Diesel
+intent.putExtra("amount", "10"); // 10 units of fuel
 
 // Start Fuelin app and wait for result
 startActivityForResult(intent, REQUEST_NFC_ORDER);
@@ -362,7 +371,7 @@ startActivityForResult(intent, REQUEST_TRANSACTION_DETAILS);
 3. Your app checks if shift is open
 4. If no shift is open, your app calls start_shift
 5. Your app reads NFC tag from card/device
-6. Your app sends NFC tag serial number to Fuelin
+6. Your app sends NFC tag serial number to Fuelin, optionally specifying fuel_type and amount
 7. Fuelin processes the tag and returns order details
 8. Your app displays the order information
 9. If needed, your app can update order quantity
@@ -423,13 +432,6 @@ startActivityForResult(intent, REQUEST_TRANSACTION_DETAILS);
    - Ensure a shift is actually open
    - Check network connectivity
 
-
-
-
-
-
-
-
 ## Appendix: Sample Integration Code
 
 ### Java - Complete Integration Sample
@@ -480,6 +482,10 @@ public class FuelinIntegrationManager {
     }
     
     public void processNfcTag(String nfcTagSerial) {
+        processNfcTag(nfcTagSerial, null, null);
+    }
+    
+    public void processNfcTag(String nfcTagSerial, Integer fuelType, String amount) {
         if (!isLoggedIn || !isShiftOpen) {
             throw new IllegalStateException("Must be logged in and have an open shift");
         }
@@ -487,6 +493,15 @@ public class FuelinIntegrationManager {
         Intent intent = new Intent("com.fuelin.attendant.NFC_ORDER");
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         intent.putExtra("nfc_tag", nfcTagSerial);
+        
+        if (fuelType != null) {
+            intent.putExtra("fuel_type", fuelType);
+        }
+        
+        if (amount != null) {
+            intent.putExtra("amount", amount);
+        }
+        
         activity.startActivityForResult(intent, REQUEST_NFC_ORDER);
     }
     
@@ -602,6 +617,10 @@ class FuelinIntegrationManager(private val activity: Activity) {
     }
     
     fun processNfcTag(nfcTagSerial: String) {
+        processNfcTag(nfcTagSerial, null, null)
+    }
+    
+    fun processNfcTag(nfcTagSerial: String, fuelType: Int? = null, amount: String? = null) {
         if (!isLoggedIn || !isShiftOpen) {
             throw IllegalStateException("Must be logged in and have an open shift")
         }
@@ -609,6 +628,14 @@ class FuelinIntegrationManager(private val activity: Activity) {
         val intent = Intent("com.fuelin.attendant.NFC_ORDER").apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             putExtra("nfc_tag", nfcTagSerial)
+            
+            fuelType?.let {
+                putExtra("fuel_type", it)
+            }
+            
+            amount?.let {
+                putExtra("amount", it)
+            }
         }
         activity.startActivityForResult(intent, REQUEST_NFC_ORDER)
     }
